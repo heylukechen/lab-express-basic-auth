@@ -19,44 +19,57 @@ router.get("/sign-up", isLoggedOut, (req, res, next) => {
 router.post("/sign-up", isLoggedOut, (req, res, next) => {
   console.log(req.body);
   const { username, password } = req.body;
-
-  bcrypt
-    .genSalt(saltRounds)
-    .then((salt) => bcrypt.hash(password, salt))
-    .then((hashedPassword) => {
-      console.log("hashedPassword", hashedPassword);
-      return User.create({ username: username, password: hashedPassword }); //
+  User.findOne({ username: username })
+    .then((foundUser) => {
+      if (foundUser) {
+        res.render("sign-up", {
+          errorMessage: "Username has been taken, use another one",
+        });
+      } else {
+        bcrypt
+          .genSalt(saltRounds)
+          .then((salt) => bcrypt.hash(password, salt))
+          .then((hashedPassword) => {
+            console.log("hashedPassword", hashedPassword);
+            return User.create({
+              username: username,
+              password: hashedPassword,
+            });
+          })
+          .then((userFromDb) => {
+            const { username } = userFromDb;
+            req.session.currentUser = { username };
+            console.log("username ===========>>>>", username);
+            res.redirect("/profile");
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      }
     })
-    .then((userFromDb) => {
-      const { username } = userFromDb;
-      req.session.currentUser = { username };
-      console.log("username ===========>>>>", username);
-      res.redirect("/profile");
-    })
-    .catch((err) => {
-      console.log(err);
-    });
+    .catch((err) => console.log(err));
 });
 
 // get profile page
-router.get("/profile", (req, res, next) => {
+router.get("/profile", isLoggedIn, (req, res, next) => {
   if (req.session.currentUser) {
     User.findOne({ username: req.session.currentUser.username })
       .then((foundUser) => {
-        res.render("profile", { foundUser });
+        foundUser.loggedIn = true;
+        res.render("profile", { foundUser, loggedIn: true });
       })
       .catch((err) => console.log(err));
   } else {
-    res.render("profile");
+    res.render("profile", {loggedIn: false});
   }
 });
 
 // get login page
 router.get("/login", isLoggedOut, (req, res, next) => {
   if (req.session.currentUser) {
-    res.render("login");
+    res.render("login", { loggedIn: true });
   } else {
-    res.render("login");
+    res.render("login", {loggedIn: false});
   }
 });
 
@@ -77,7 +90,7 @@ router.post("/login", isLoggedOut, (req, res, next) => {
       console.log("user", foundUser);
       //check if user found in DB
       if (!foundUser) {
-        res.render("/login", {
+        res.render("login", {
           errorMessage: "Username is not registered. Try with other username.",
         });
       } else if (bcrypt.compareSync(password, foundUser.password)) {
@@ -87,7 +100,7 @@ router.post("/login", isLoggedOut, (req, res, next) => {
         res.redirect("/profile");
       } else {
         //if enter password does not maktch user password
-        red.render("/login", { errorMessage: "Incorrect password." });
+        red.render("login", { errorMessage: "Incorrect password." });
       }
     })
     .catch((err) => console.log(err));
@@ -95,12 +108,16 @@ router.post("/login", isLoggedOut, (req, res, next) => {
 
 // get main page
 router.get("/main", (req, res, next) => {
-  res.render("main");
+  if (req.session.currentUser){
+    res.render("main",  { loggedIn: true });
+  } else {
+    res.render("main",  { loggedIn: false });
+  }
 });
 
 // get private page
 router.get("/private", isLoggedIn, (req, res, next) => {
-  res.render("private");
+  res.render("private", { loggedIn: true });
 });
 
 router.post("/logout", isLoggedIn, (req, res, next) => {

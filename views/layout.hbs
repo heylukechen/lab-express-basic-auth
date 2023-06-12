@@ -11,15 +11,16 @@
   <body>
     <header>
       <ul>
-        <li>
-          <a href="/">Home</a>
-        </li>
+        <li><a href="/">Home</a></li>
         <li><a href="/main">Main</a></li>
-        <li><a href="/profile">Profile</a></li>
-        <li><a href="/private">Private</a></li>
-        <li><form action="/logout" method="post"><button type="submit">Log out</button></form></li>
-        <li><a href="/sign-up">Sign up</a></li>
-        <li><a href="/login">Log in</a></li>
+        {{#if loggedIn}}
+          <li><a href="/profile">Profile</a></li>
+          <li><a href="/private">Private</a></li>
+          <li><form action="/logout" method="post"><button type="submit">Log out</button></form></li>
+        {{else}}
+          <li><a href="/sign-up">Sign up</a></li>
+          <li><a href="/login">Log in</a></li>
+        {{/if}}
       </ul>
     </header>
 
